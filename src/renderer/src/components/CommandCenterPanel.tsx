@@ -36,6 +36,7 @@ import {
 } from '@/store/config';
 import { canReceiveInbox } from '@shared/agentProvider';
 import { isComposingKey } from '@shared/imeGuard';
+import { ALL_AGENTS_MUTED, isBubbleMuted } from '@shared/breakerBubbleMute';
 import { useRtl } from '@/i18n/useDirection';
 
 /** Michael's control surface. Shown instead of the plain terminal/files panel
@@ -360,6 +361,8 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
   const [tokenCap, setTokenCap] = useState<number | undefined>(undefined);
   // Per-agent token limit (overrides the floor budget for that agent), keyed by id.
   const [agentTokenCaps, setAgentTokenCaps] = useState<Record<string, number>>({});
+  const mutedBubbles = useStore((s) => s.mutedBreakerBubbles);
+  const setBreakerBubbleMuted = useStore((s) => s.setBreakerBubbleMuted);
   const [restarting, setRestarting] = useState<string | null>(null);
   const [engineProvider, setEngineProvider] = useState<AgentProvider>('claude');
   const [engineModel, setEngineModel] = useState<string | undefined>(undefined);
@@ -674,6 +677,12 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
       </Section>
 
       <Section title={t('commandCenter.agents')}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--cth-ink-700)', marginBottom: 6, cursor: 'pointer' }}
+          title={t('commandCenter.muteAllBubblesTitle')}>
+          <input type="checkbox" checked={mutedBubbles.includes(ALL_AGENTS_MUTED)}
+            onChange={(e) => setBreakerBubbleMuted(ALL_AGENTS_MUTED, e.target.checked)} />
+          {t('commandCenter.muteAllBubbles')}
+        </label>
         {agents.map((a) => {
           const agentProvider = inferAgentProvider(a.command, a.provider);
           const agentPreset = providerPreset(agentProvider);
@@ -725,6 +734,17 @@ function FloorTab({ seed }: { seed: { text: string; seq: number } }) {
               >{a.name}{a.isGod ? t('commandCenter.godTag') : ''}</button>
               <PixelBadge status={armed ? 'looping' : a.status} />
               {armed && <span title={breaker?.reason} style={{ color: 'var(--cth-coral)', fontSize: 12 }}>⚠</span>}
+              {armed && !mutedBubbles.includes(ALL_AGENTS_MUTED) && (
+                <button
+                  onClick={() => setBreakerBubbleMuted(a.id, !isBubbleMuted(mutedBubbles, a.id))}
+                  title={t(isBubbleMuted(mutedBubbles, a.id) ? 'commandCenter.unmuteBubbleTitle' : 'commandCenter.muteBubbleTitle')}
+                  style={{
+                    flexShrink: 0, padding: '1px 6px', border: 'none', cursor: 'pointer',
+                    background: 'var(--cth-cream-200)', boxShadow: 'inset 0 0 0 1px var(--cth-ink-700)',
+                    fontFamily: 'var(--cth-font-ui)', fontSize: 11, color: 'var(--cth-ink-900)'
+                  }}
+                >{t(isBubbleMuted(mutedBubbles, a.id) ? 'commandCenter.unmuteBubble' : 'commandCenter.muteBubble')}</button>
+              )}
               <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--cth-ink-500)' }}>
                 {t('commandCenter.toolCalls', { count: toolCounts[a.id] ?? 0 })}
               </span>

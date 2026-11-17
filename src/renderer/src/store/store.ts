@@ -16,6 +16,7 @@ import { DEFAULT_ORG_TRIGGER, type OrgTriggerConfig, type WebhookTrigger } from 
 import { isCompactionCommand } from '@shared/providerAutomation';
 import { preferredAgentRole } from '@shared/agentRole';
 import { isInboxNudge } from '@shared/hiveNudge';
+import { readMutedAgents, withMuted, writeMutedAgents } from '@shared/breakerBubbleMute';
 import { refocusAfterRemoval, focusOnLoad, restoreFocus } from './focusMode';
 import { chooseRosterSource } from './rosterSource';
 
@@ -280,6 +281,10 @@ interface State {
    *  on switch). OfficeFloor depends on this and rebuilds the scene on change. */
   officeTheme: ThemeId;
   setOfficeTheme: (theme: ThemeId) => void;
+  /** Agent ids whose circuit-breaker think bubble is silenced (#291). Persisted
+   *  in localStorage; the breaker and its glyph/⚠ are unaffected. */
+  mutedBreakerBubbles: string[];
+  setBreakerBubbleMuted: (agentId: string, muted: boolean) => void;
   /** Mirror of config.webhookTriggers — the inbound HTTP endpoints. Webhooks are
    *  editable from BOTH Settings → Connections and the Triggers tab, so neither
    *  surface keeps its own copy: both render off this list and both call the
@@ -882,6 +887,12 @@ export const useStore = create<State>((set, get) => ({
   setHasOpenAiKey: (has) => set({ hasOpenAiKey: has }),
   officeTheme: 'office',
   setOfficeTheme: (theme) => set({ officeTheme: theme }),
+  mutedBreakerBubbles: readMutedAgents(typeof window !== 'undefined' ? window.localStorage : undefined),
+  setBreakerBubbleMuted: (agentId, muted) => {
+    const next = withMuted(get().mutedBreakerBubbles, agentId, muted);
+    writeMutedAgents(typeof window !== 'undefined' ? window.localStorage : undefined, next);
+    set({ mutedBreakerBubbles: next });
+  },
   webhookTriggers: [],
   setWebhookTriggers: (list) => set({ webhookTriggers: list }),
   // A copy, not the shared DEFAULT_ORG_TRIGGER instance — main takes the same

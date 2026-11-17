@@ -1,3 +1,4 @@
+import { isBubbleMuted } from '@shared/breakerBubbleMute';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Application, Container, Graphics, Ticker, Texture } from 'pixi.js';
@@ -1538,7 +1539,9 @@ export function OfficeFloor() {
             // warning glyph so a runaway agent is visible on the floor.
             c.setStatusGlyph('looping');
             c.sitAtDesk(false);
-            c.showThought(liveActivity(agent, t('office.activity.looping')));
+            // Per-agent mute (#291): hide only the bubble; glyph + breaker stay.
+            if (isBubbleMuted(useStore.getState().mutedBreakerBubbles, agent.id)) c.hideThought();
+            else c.showThought(liveActivity(agent, t('office.activity.looping')));
             break;
           case 'success':
             c.setStatusGlyph('success');
