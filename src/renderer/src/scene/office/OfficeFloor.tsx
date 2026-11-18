@@ -1596,6 +1596,14 @@ export function OfficeFloor() {
       let lastSelected: string | null = useStore.getState().selectedId;
       const unsubscribe = useStore.subscribe((s, prev) => {
         if (s.agents !== prev.agents) syncAgents();
+        // #291: mute/unmute must take effect now — applyState early-returns on an
+        // unchanged looping agent, so force a re-apply for the ones showing the bubble.
+        if (s.mutedBreakerBubbles !== prev.mutedBreakerBubbles) {
+          for (const agent of s.agents) {
+            const rt = runtimes.get(agent.id);
+            if (rt && agent.status === 'looping') applyState(agent, rt, true);
+          }
+        }
         if (s.selectedId !== lastSelected) {
           lastSelected = s.selectedId;
           const rt = s.selectedId ? runtimes.get(s.selectedId) : undefined;
